@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/ python
 
 # Raspberry Pi Cluster ARP Table Generator
 
@@ -27,9 +27,9 @@ import interface_info
 import send_email
 
 # email info
-to_user = '@gmail.com'
+to_user = 'vanmatrix@gmail.com'
 from_user = to_user
-password = ''
+password = 'm@triX722ssx^.^='
 
 def say_hello(master_socket, message, multicast_group, stop_event):
     """
@@ -68,6 +68,8 @@ if __name__ == '__main__':
 
     parser.add_argument("nodes", help="Specify the number of nodes in the cluster", type=int) # compulsory argument
 
+    parser.add_argument("-s", "--sleep", help="Specify sleep time if running on boot", type=int) 
+
     parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
     parser.add_argument("-p", "--port", help="Specifcy multicast group port", type=int, default=10000)
 
@@ -80,9 +82,14 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbosity", help="Incease output verbosity", action="count", default=0)
     
     args = parser.parse_args()
-
+    
     # logger
     logger = logging.getLogger("Master_Node_ARP")
+    
+    if args.sleep:
+        logger.debug("Going to sleep . . . ")
+        import time
+        time.sleep(args.sleep)
 
     if args.verbosity == 0:
         level = logging.INFO

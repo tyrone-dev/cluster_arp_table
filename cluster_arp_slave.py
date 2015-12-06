@@ -30,7 +30,9 @@ if __name__ == '__main__':
 
     parser.add_argument("-i", "--interface", help="Specify which network interface to use", default="eth0") # default interface is eth0)
     parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
-    parser.add_argument("-p", "--port", help="Specifcy multicast group port", type=int, default=10000)
+    parser.add_argument("-p", "--port", help="Specify multicast group port", type=int, default=10000)
+    
+    parser.add_argument("-s", "--sleep", help="Specify time to sleep", type=int)
 
     parser.add_argument("-t", "--timeout", help="Specify timeout in seconds for waiting for connections from nodes" , type=int, default=None)
 
@@ -41,6 +43,10 @@ if __name__ == '__main__':
     # logger
     logger = logging.getLogger("Slave_Node_ARP")
 
+    if args.sleep:
+        import time
+        time.sleep(args.sleep)
+        
     if args.verbosity == 0:
         level = logging.INFO
     else:
