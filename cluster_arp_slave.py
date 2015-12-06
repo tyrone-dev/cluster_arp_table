@@ -24,7 +24,7 @@ import argparse
 import interface_info
 import logging
 
-if __name__ == '__main_':
+if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(description="Generate ARP Table for a Raspberry Pi Cluster\nSlave Node")
 
