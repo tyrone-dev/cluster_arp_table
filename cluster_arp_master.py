@@ -21,12 +21,15 @@ import socket
 import argparse
 import json
 import threading
-import interface_info
 import logging
 
-# TODO: write arp table to file
-# TODO: send arp table via email
-# TODO: add quiet mode check
+import interface_info
+import send_email
+
+# email info
+to_user = '@gmail.com'
+from_user = to_user
+password = ''
 
 def say_hello(master_socket, message, multicast_group, stop_event):
     """
@@ -40,6 +43,25 @@ def say_hello(master_socket, message, multicast_group, stop_event):
 
     logger.debug("Exiting ping packet thread . . .")
 
+def create_arp_table(cluster_info, cluster_name, filename):
+    """
+    Create ARP Table by parsing list containing all node information.
+    Writes the table a file. 
+    """
+
+    logger.debug("Creating new file for arp table.")
+    arp_file = open(filename, 'w')
+    arp_file.write("Cluster ARP Table: {}\n\n".format(cluster_name))
+    
+    for node in cluster_info:
+        arp_file.write("Hostname: %-*s IP Address: %-*s MAC Address: %-*s\n" % (18, node[0], 18, node[1], 18, node[2]))
+
+    logger.debug("ARP Table file created")
+    arp_file.close()
+    logger.debug("File closed.")
+    
+    return
+
 if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(description="Generate ARP Table for a Raspberry Pi Cluster\nMaster Node")
@@ -49,13 +71,14 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
     parser.add_argument("-p", "--port", help="Specifcy multicast group port", type=int, default=10000)
 
+    parser.add_argument("-n", "--name", help="Specify a name for the cluster", default="My Cluster :)")
 
     parser.add_argument("-i", "--interface", help="Specify which network interface to use", default="eth0") # default interface is eth0)
     parser.add_argument("-t", "--timeout", help="Specify timeout in seconds for waiting for connections from nodes", type=int, default=10)
-    parser.add_argument("-f", "--filename", help="Specify filename to write ARP Table to", default="pi_cluster_arp")
+    parser.add_argument("-f", "--filename", help="Specify filename to write ARP Table to", default="cluster_arp_table")
     parser.add_argument("-q", "--quiet", help="Enable flag to not send email with ARP Table", action="store_true")
     parser.add_argument("-v", "--verbosity", help="Incease output verbosity", action="count", default=0)
-
+    
     args = parser.parse_args()
 
     # logger
@@ -143,3 +166,15 @@ if __name__ == '__main__':
     # generate list of all nodes in cluster
     cluster_info.append(master_info)
     cluster_info.extend(sorted(slaves))
+
+    # create arp file
+    create_arp_table(cluster_info, args.name, args.filename)
+    
+    # check quiet mode flag (no email)
+    if not args.quiet:
+        logger.info("Sending ARP Table via email . . . ")
+        try:
+            send_email.send_email(args.filename, args.name, to_user, from_user, password)
+            logger.debug("ARP Table successfully sent")
+        except:
+            logger.error("Sending ARP Table failed")
