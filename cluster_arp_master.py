@@ -85,11 +85,6 @@ if __name__ == '__main__':
     
     # logger
     logger = logging.getLogger("Master_Node_ARP")
-    
-    if args.sleep:
-        logger.debug("Going to sleep . . . ")
-        import time
-        time.sleep(args.sleep)
 
     if args.verbosity == 0:
         level = logging.INFO
@@ -104,6 +99,11 @@ if __name__ == '__main__':
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
+    if args.sleep:
+        logger.debug("Going to sleep . . . ")
+        import time
+        time.sleep(args.sleep)
+    
     hello_thread_stop = threading.Event()
 
     message = ". . . Cluster Master Node . . ."

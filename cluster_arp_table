@@ -1,6 +1,0 @@
-Cluster ARP Table: My Cluster :)
-
-Hostname: Master-Node        IP Address: 10.0.0.30          MAC Address: B8:27:EB:1D:95:0F 
-Hostname: Slave-Node1        IP Address: 10.0.0.31          MAC Address: B8:27:EB:45:E5:90 
-Hostname: Slave-Node2        IP Address: 10.0.0.32          MAC Address: B8:27:EB:86:94:B6 
-Hostname: Slave-Node3        IP Address: 10.0.0.33          MAC Address: B8:27:EB:D4:0A:A4 

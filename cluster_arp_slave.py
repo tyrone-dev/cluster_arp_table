@@ -43,10 +43,6 @@ if __name__ == '__main__':
     # logger
     logger = logging.getLogger("Slave_Node_ARP")
 
-    if args.sleep:
-        import time
-        time.sleep(args.sleep)
-        
     if args.verbosity == 0:
         level = logging.INFO
     else:
@@ -62,6 +58,11 @@ if __name__ == '__main__':
 
     server_address = ('', args.port)
 
+    if args.sleep:
+        logger.debug("Going to sleep for a bit")
+        import time
+        time.sleep(args.sleep)
+    
     # get node info
     node = interface_info.Interface(args.interface)
 
