@@ -27,9 +27,9 @@ import interface_info
 import send_email
 
 # email info
-to_user = 'vanmatrix@gmail.com'
+to_user = 'misa.stuff01@gmail.com'
 from_user = to_user
-password = 'm@triX722ssx^.^='
+password = 'misaisreallycute'
 
 def say_hello(master_socket, message, multicast_group, stop_event):
     """
@@ -62,6 +62,24 @@ def create_arp_table(cluster_info, cluster_name, filename):
     
     return
 
+def create_master_info(master_ip, num_nodes, filename):
+    """
+    Create a file containing master ip address and
+    number of nodes online in cluster.
+
+    Info to be sent later via serial comms
+    """
+    
+    logger.debug("Creating core info file")
+    core_info_file = open(filename, 'w')
+    core_info_file.write("Master IP:\n{}\nNodes: {}\n".format(master_ip, num_nodes))
+
+    logger.debug("Core info file created")
+    core_info_file.close()
+    logger.debug("core info file closed")
+
+    return
+
 if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(description="Generate ARP Table for a Raspberry Pi Cluster\nMaster Node")
@@ -81,6 +99,8 @@ if __name__ == '__main__':
     parser.add_argument("-q", "--quiet", help="Enable flag to not send email with ARP Table", action="store_true")
     parser.add_argument("-v", "--verbosity", help="Incease output verbosity", action="count", default=0)
     
+    parser.add_argument("-r", "--rfid", help="Enable RFID reader", action="store_true")
+
     args = parser.parse_args()
     
     # logger
@@ -170,6 +190,9 @@ if __name__ == '__main__':
         logger.debug("Closing socket . . .")
         sock.close()
 
+    # create core info file
+    create_master_info(master.ip_addr, connected_nodes + 1, "core_info")
+    
     # generate list of all nodes in cluster
     cluster_info.append(master_info)
     cluster_info.extend(sorted(slaves))
@@ -185,3 +208,26 @@ if __name__ == '__main__':
             logger.debug("ARP Table successfully sent")
         except:
             logger.error("Sending ARP Table failed")
+
+
+    if args.rfid:
+        logger.info("Starting RFID Loop . . . ")
+        
+        import serial
+        ser = serial.Serial('/dev/ttyACM0', 9600)
+
+        while True:
+            data = ser.readline().strip('\x00')
+            
+            if (data == 'authorized\r\n'):
+                # send email
+                try:
+                    send_email.send_email(args.filename, args.name, to_user, from_user, password)
+                    logger.debug("ARP Table successfully sent - via RFID")
+                    ser.write("Email Sent")
+                except:
+                    logger.error("Sending ARP Table failed - via RFID")
+            else:
+                # do nothing
+                ser.write("Unauthorized!")
+                logger.warning("Unauthorized access attempted!")
