@@ -88,12 +88,13 @@ if __name__ == '__main__':
 
     parser.add_argument("-s", "--sleep", help="Specify sleep time if running on boot", type=int) 
 
-    parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
-    parser.add_argument("-p", "--port", help="Specifcy multicast group port", type=int, default=10000)
+    #parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
+    parser.add_argument("-p", "--port", help="Specify broadcast group port", type=int, default=10000)
 
-    parser.add_argument("-n", "--name", help="Specify a name for the cluster", default="My Cluster :)")
+    parser.add_argument("-n", "--name", help="Specify a name for the cluster", default="__katherine cluster__")
 
     parser.add_argument("-i", "--interface", help="Specify which network interface to use", default="eth0") # default interface is eth0)
+    parser.add_argument("-e", "--external", help="Specificy which network interface to use for the external network IF multiple interfaces on master", default=None)
     parser.add_argument("-t", "--timeout", help="Specify timeout in seconds for waiting for connections from nodes", type=int, default=10)
     parser.add_argument("-f", "--filename", help="Specify filename to write ARP Table to", default="cluster_arp_table")
     parser.add_argument("-q", "--quiet", help="Enable flag to not send email with ARP Table", action="store_true")
@@ -128,16 +129,40 @@ if __name__ == '__main__':
 
     message = ". . . Cluster Master Node . . ."
 
-    multicast_group = (args.multicast, args.port)
+    #multicast_group = (args.multicast, args.port) - use multicast if not on isolated network
 
+    # create list of all interfaces on master
+
+    interfaces = [args.interface, args.external]
+    interfaces = [x for x in interfaces if x != None]
+    iface_info = []
+    
     # get master node info
+    for iface in interfaces:
+        master = interface_info.Interface(iface)
+        iface_info.append(master)
+    
+    master_info = [iface_info[0].hostname, iface_info[0].ip_addr, iface_info[0].mac_addr]
+    master_found_info = [master_info]
+    
+    # create identifer for external interface
+    if args.external != None:
+        master_ext_info = [iface_info[1].hostname + "_ext", iface_info[1].ip_addr, iface_info[1].mac_addr]
+        master_found_info.append(master_ext_info)
+    
+    # create broadcast group address
 
-    master = interface_info.Interface(args.interface)
-
-    master_info = [master.hostname, master.ip_addr, master.mac_addr]
-
+    broadcast_group = master_info[1].split('.')
+    broadcast_group[3] = '255'
+    broadcast_group = ['.'.join(broadcast_group)]
+    broadcast_group.append(10000)
+    broadcast_group = tuple(broadcast_group)
+    
     # create UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    # set options: broadcast
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # set a timeout value to prevent socket from blocking indefinitely
     sock.settimeout(args.timeout)
@@ -157,9 +182,9 @@ if __name__ == '__main__':
 
     try:
 
-        # send data to MCast group
+        # send data to broadcast group
         #sent  = sock.sendto(message, multicast_group)
-        hello_thread = threading.Thread(name="Hello Packets", target=say_hello, args=(sock, message, multicast_group, hello_thread_stop,))
+        hello_thread = threading.Thread(name="Hello Packets", target=say_hello, args=(sock, message, broadcast_group, hello_thread_stop,))
         hello_thread.start()
         
         # listen for responses from all recipients
@@ -194,7 +219,10 @@ if __name__ == '__main__':
     create_master_info(master.ip_addr, connected_nodes + 1, "core_info")
     
     # generate list of all nodes in cluster
-    cluster_info.append(master_info)
+    for iface in master_found_info:
+        cluster_info.append(iface)
+    
+    cluster_info.reverse()    
     cluster_info.extend(sorted(slaves))
 
     # create arp file
@@ -209,7 +237,7 @@ if __name__ == '__main__':
         except:
             logger.error("Sending ARP Table failed")
 
-
+    # for rfid control
     if args.rfid:
         logger.info("Starting RFID Loop . . . ")
         
