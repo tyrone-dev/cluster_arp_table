@@ -28,13 +28,13 @@ if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(description="Generate ARP Table for a Raspberry Pi Cluster\nSlave Node")
 
-    parser.add_argument("-i", "--interface", help="Specify which network interface to use", default="eth0") # default interface is eth0)
-    parser.add_argument("-m", "--multicast", help="Specify multicast group address", default="224.3.29.71")
-    parser.add_argument("-p", "--port", help="Specify multicast group port", type=int, default=10000)
+    parser.add_argument("-i", "--interface", help="Specify which network interface to use", default="eth0") # default interface is eth0
+    parser.add_argument("-m", "--multicast", nargs='?', const="224.3.29.71", help="Use multicast and specify multicast group address (optional) [Defaults to BROADCAST]")
+    parser.add_argument("-p", "--port", help="Specify multicast/broadcast group port", type=int, default=10000)
     
     parser.add_argument("-s", "--sleep", help="Specify time to sleep", type=int)
 
-    parser.add_argument("-t", "--timeout", help="Specify timeout in seconds for waiting for connections from nodes" , type=int, default=None)
+    parser.add_argument("-t", "--timeout", help="Specify timeout in seconds for waiting for connections from nodes" , type=int, default=30)
 
     parser.add_argument("-v", "--verbosity", help="Incease output verbosity", action="count", default=0)
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         level = logging.INFO
     else:
         level = logging.DEBUG
-
+    
     logger.setLevel(level)
 
     # file handler
@@ -79,10 +79,19 @@ if __name__ == '__main__':
     # bind socket to the server address
     sock.bind(server_address)
 
-    # add the socket to the multicast group
-    group = socket.inet_aton(args.multicast)
-    mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    if args.multicast != None:
+        # use multicast
+
+        # add the socket to the multicast group
+        logger.debug("Using Multicast with address {}".format(args.multicast))
+        group = socket.inet_aton(args.multicast)
+        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    else:
+        # use broadcast
+        logger.debug("Using Broadcast")
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # UDP echo client receiver
     while True:
@@ -90,7 +99,7 @@ if __name__ == '__main__':
         try:    
             data, address = sock.recvfrom(1024)
 
-            logger.info("Received {} bytes from Master at: {}".format(len(data), address))
+            logger.info("Received {} bytes from Master at: {}. Message: {}".format(len(data), address, data))
         
         except socket.timeout:
             logger.warning("Timed out, no response")
